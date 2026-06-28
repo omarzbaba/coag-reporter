@@ -138,6 +138,39 @@ input, button, textarea, select { font-size: 1rem; }
 .batch-actions { display: flex; gap: 8px; }
 .batch-actions .btn { flex: 1; justify-content: center; }
 
+/* ---- form-style entry table (mirrors the HFH report forms) ---- */
+.interp-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.interp-label { font-weight: 800; font-size: 13px; }
+.interp-seg { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.interp-opt { min-height: 40px; padding: 0 14px; border: 2px solid var(--line); border-radius: 9px; background: var(--surface); font-weight: 800; font-size: 13px; letter-spacing: .03em; cursor: pointer; }
+.interp-opt[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.formtable { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.formhead { display: grid; grid-template-columns: 1fr 210px 120px; gap: 10px; padding: 8px 12px; background: var(--surface-2); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-muted); }
+.formgroup { background: var(--accent); color: #fff; font-weight: 800; font-size: 12.5px; padding: 7px 12px; }
+.formrow { display: grid; grid-template-columns: 1fr 210px 120px; gap: 10px; align-items: center; padding: 7px 12px; border-top: 1px solid var(--line); border-left: 5px solid transparent; }
+.formrow.ok { border-left-color: var(--ok-line); }
+.formrow.warn { border-left-color: var(--warn-line); background: var(--warn-bg); }
+.formrow.bad { border-left-color: var(--bad-line); background: var(--bad-bg); }
+.formrow.neutral { border-left-color: var(--neutral-line); }
+.fname { font-weight: 600; font-size: 14px; }
+.fnote { font-size: 11.5px; color: var(--ink-muted); font-weight: 500; margin-top: 2px; }
+.fref { font-size: 12.5px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.fnum-wrap { display: inline-flex; align-items: center; gap: 8px; }
+.fnum { width: 88px; min-height: 42px; padding: 6px 8px; border: 2px solid var(--line); border-radius: 9px; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: center; background: var(--surface); }
+.fnum::-webkit-outer-spin-button, .fnum::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.fnum[type=number] { -moz-appearance: textfield; }
+.formrow.warn .fnum { border-color: var(--warn-line); } .formrow.bad .fnum { border-color: var(--bad-line); } .formrow.ok .fnum { border-color: var(--ok-line); }
+.fselect, .ftext { width: 100%; min-height: 42px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 9px; font-size: 15px; background: var(--surface); }
+.fchoice { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.fchoice button { min-height: 42px; padding: 0 12px; border: 2px solid var(--line); border-radius: 9px; background: var(--surface); font-weight: 700; font-size: 13px; cursor: pointer; }
+.fchoice button[aria-pressed="true"][data-kind="normal"] { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok-ink); }
+.fchoice button[aria-pressed="true"][data-kind="abnormal"] { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn-ink); }
+.formrow .chip { min-width: 0; padding: 4px 8px; font-size: 11px; }
+@media (max-width: 560px) {
+  .formhead { display: none; }
+  .formrow { grid-template-columns: 1fr; gap: 4px; }
+}
+
 /* ---- print (single OR batch — both go through the .print-batch overlay) ---- */
 .print-batch { display: none; }
 @media print {
@@ -172,6 +205,7 @@ input, button, textarea, select { font-size: 1rem; }
       title: "von Willebrand disease panel",
       heading: "VON WILLEBRAND DISEASE PANEL",
       signature: "Rachel Brancamp, MD",
+      hidden: true,   // subsumed by the Bleeding Disorder form's VW screen; hidden from the picker
       analytes: [
         { id: "vwf_ag", label: "von Willebrand factor antigen", unit: "%", type: "number", low: 50, high: 150, abnormal: "low", decimals: 0 },
         { id: "gp1b",   label: "GP1b activity",                 unit: "%", type: "number", low: 50, high: 150, abnormal: "low", decimals: 0 },
@@ -194,6 +228,7 @@ input, button, textarea, select { font-size: 1rem; }
       title: "Lupus anticoagulant evaluation",
       heading: "LUPUS ANTICOAGULANT EVALUATION",
       signature: "Rachel Brancamp, MD",
+      hidden: true,   // subsumed by the Hypercoagulability form's antiphospholipid panel; hidden from the picker
       analytes: [
         { id: "ptt_la", label: "PTT-LA", type: "choice",
           options: [{ v: "neg", label: "Negative", kind: "normal" }, { v: "pos", label: "Positive", kind: "abnormal" }] },
@@ -233,131 +268,146 @@ input, button, textarea, select { font-size: 1rem; }
   ];
 
   // ===================================================================
-  // Drafted from the existing reviewed TM·Coag panels (click-state model).
-  // These render in the same UI and use the generic rule-based prose engine.
-  // Wording is a DRAFT — refine intro/conclusion in Settings (rule impressions
-  // are reused verbatim from your reviewed panel logic).
+  // Bleeding Disorder + Hypercoagulability — modeled on the HFH report forms
+  // (frm3 / frm4): the same sections, exact reference ranges, and numeric
+  // "Results" fields you type into. Rule impressions are reused from the
+  // reviewed TM·Coag panel logic. Wording is editable in Settings.
   // ===================================================================
   function _opt(a) { return a.length > 3 ? { v: a[0], label: a[1], kind: a[2], report: a[3] } : { v: a[0], label: a[1], kind: a[2] }; }
-  function A(id, label, group, arr) { return { id: id, label: label, type: "choice", group: group, options: arr.map(_opt) }; }
+  function CH(id, label, group, arr, extra) { return Object.assign({ id: id, label: label, type: "choice", group: group, options: arr.map(_opt) }, extra || {}); }
+  function SEL(id, label, group, options, extra) { return Object.assign({ id: id, label: label, type: "select", group: group, options: options }, extra || {}); }
+  function TXT(id, label, group, extra) { return Object.assign({ id: id, label: label, type: "text", group: group }, extra || {}); }
+  function NUM(id, label, group, low, high, unit, o) {
+    o = o || {};
+    return { id: id, label: label, group: group, type: "number", low: low, high: high, unit: unit,
+      decimals: o.decimals != null ? o.decimals : 1, sig: o.sig != null ? o.sig : null,
+      hiWord: o.hi, loWord: o.lo, hiReport: o.hiReport, loReport: o.loReport, note: o.note, ref: o.ref };
+  }
   var _N = ["normal", "Normal", "normal"], _NEG = ["negative", "Negative", "normal"];
 
   DEFAULT_PANELS.push({
     id: "bleeding_diathesis",
     title: "Bleeding diathesis panel",
-    heading: "BLEEDING DIATHESIS PANEL",
-    signature: "Rachel Brancamp, MD",
-    draft: true,
+    heading: "BLEEDING DISORDER REPORT",
+    signature: "Physician signature / date:",
+    interpretation: { label: "Interpretation", options: ["PIVW", "PIGN"] },
     analytes: [
-      A("pt", "PT / INR", "Basic coagulation", [_N, ["prolonged", "↑ Prolonged", "abnormal", "The PT/INR is prolonged."]]),
-      A("aptt", "aPTT", "Basic coagulation", [_N, ["prolonged", "↑ Prolonged", "abnormal", "The aPTT is prolonged."]]),
-      A("fibrinogen", "Fibrinogen", "Basic coagulation", [_N, ["low", "↓ Low", "abnormal", "The fibrinogen is decreased."], ["high", "↑ High", "abnormal", "The fibrinogen is increased (acute-phase reactant)."]]),
-      A("platelet_count", "Platelet count", "Basic coagulation", [_N, ["low", "↓ Low", "abnormal", "The platelet count is decreased (thrombocytopenia)."], ["high", "↑ High", "abnormal", "The platelet count is increased (thrombocytosis)."]]),
-      A("thrombin_time", "Thrombin time", "Basic coagulation", [_N, ["prolonged", "↑ Prolonged", "abnormal", "The thrombin time is prolonged."]]),
-      A("d_dimer", "D-dimer", "Basic coagulation", [_N, ["elevated", "↑ Elevated", "abnormal", "The D-dimer is elevated."]]),
-      A("vwf_gp1b", "VWF:GP1bM activity", "Von Willebrand screen", [_N, ["decreased", "↓ Low", "abnormal", "The VWF activity (GP1bM) is reduced."]]),
-      A("vwf_ag", "Von Willebrand antigen", "Von Willebrand screen", [_N, ["decreased", "↓ Low", "abnormal", "The VWF antigen is reduced."]]),
-      A("factor_viii", "Factor VIII activity", "Von Willebrand screen", [_N, ["decreased", "↓ Low", "abnormal", "The factor VIII activity is reduced."], ["elevated", "↑ High", "abnormal", "The factor VIII activity is elevated (acute-phase reactant)."]]),
-      A("multimer", "Multimeric analysis", "Von Willebrand screen", [_N, ["abnormal", "Abnormal", "abnormal", "The multimer pattern is abnormal (loss of high-molecular-weight multimers)."]]),
-      A("factor_xii", "Factor XII activity", "Specific factors", [_N, ["decreased", "↓ Low", "abnormal", "The factor XII activity is reduced."]]),
-      A("factor_ix", "Factor IX activity", "Specific factors", [_N, ["decreased", "↓ Low", "abnormal", "The factor IX activity is reduced."]]),
-      A("factor_xi", "Factor XI activity", "Specific factors", [_N, ["decreased", "↓ Low", "abnormal", "The factor XI activity is reduced."]]),
-      A("factor_v", "Factor V activity", "Specific factors", [_N, ["decreased", "↓ Low", "abnormal", "The factor V activity is reduced."]]),
-      A("factor_vii", "Factor VII activity", "Specific factors", [_N, ["decreased", "↓ Low", "abnormal", "The factor VII activity is reduced."]]),
-      A("factor_x", "Factor X activity", "Specific factors", [_N, ["decreased", "↓ Low", "abnormal", "The factor X activity is reduced."]]),
-      A("factor_ii", "Factor II activity", "Specific factors", [_N, ["decreased", "↓ Low", "abnormal", "The factor II (prothrombin) activity is reduced."]]),
-      A("factor_xiii", "Factor XIII screen", "Specific factors", [_NEG, ["positive", "+ Positive", "abnormal", "The factor XIII screen is positive (soluble clot), indicating factor XIII deficiency."]]),
-      A("inhibitor_screen", "Factor inhibitor screen", "Specific factors", [_NEG, ["positive", "+ Positive", "abnormal", "The factor inhibitor screen is positive (Bethesda units detected)."]]),
-      A("closure_epi", "PFA closure time — EPI", "Specific factors", [_N, ["prolonged", "↑ Prolonged", "abnormal", "The PFA closure time (EPI) is prolonged."]]),
-      A("closure_adp", "PFA closure time — ADP", "Specific factors", [_N, ["prolonged", "↑ Prolonged", "abnormal", "The PFA closure time (ADP) is prolonged."]])
+      NUM("pt", "Prothrombin time / INR", "Basic coagulation tests", 12.1, 14.5, "sec", { hi: "prolonged" }),
+      NUM("aptt", "Activated partial thromboplastin time", "Basic coagulation tests", 22, 36, "sec", { hi: "prolonged" }),
+      NUM("fibrinogen", "Fibrinogen", "Basic coagulation tests", 200, 400, "mg/dL", { decimals: 0, lo: "decreased", hi: "increased" }),
+      NUM("platelet_count", "Platelet count", "Basic coagulation tests", 150, 450, "K/µL", { decimals: 0, lo: "decreased", hi: "increased" }),
+      NUM("thrombin_time", "Thrombin time", "Basic coagulation tests", 15, 25, "sec", { hi: "prolonged" }),
+      NUM("d_dimer", "D-dimer", "Basic coagulation tests", null, 0.50, "µg/mL", { decimals: 2, hi: "elevated", ref: "<0.50 µg/mL" }),
+      NUM("vwf_gp1b", "VWGP1b activity", "Von Willebrand disease screen", 51, 200, "%", { decimals: 0, lo: "reduced", loReport: "The VWF activity (GP1bM) is reduced ({val}%)." }),
+      NUM("vwf_ag", "Von Willebrand antigen", "Von Willebrand disease screen", 50, 150, "%", { decimals: 0, lo: "reduced", loReport: "The VWF antigen is reduced ({val}%)." }),
+      SEL("abo", "ABO blood type", "Von Willebrand disease screen", [{ v: "", label: "—" }, { v: "O", label: "O" }, { v: "A", label: "A" }, { v: "B", label: "B" }, { v: "AB", label: "AB" }]),
+      NUM("factor_viii", "Factor VIII activity", "Von Willebrand disease screen", 50, 150, "%", { decimals: 0, lo: "reduced", hi: "elevated" }),
+      CH("multimer", "Multimeric analysis", "Von Willebrand disease screen", [_N, ["abnormal", "Abnormal", "abnormal", "The multimer pattern is abnormal (loss of high-molecular-weight multimers)."]], { note: "Reflex only when VWGP1b activity is low", ref: "See attachment" }),
+      NUM("factor_xii", "Factor XII activity", "Specific coagulation factor tests", 58, 166, "%", { decimals: 0, lo: "reduced" }),
+      NUM("factor_ix", "Factor IX activity", "Specific coagulation factor tests", 50, 150, "%", { decimals: 0, lo: "reduced" }),
+      NUM("factor_xi", "Factor XI activity", "Specific coagulation factor tests", 50, 150, "%", { decimals: 0, lo: "reduced" }),
+      NUM("factor_v", "Factor V activity", "Specific coagulation factor tests", 50, 150, "%", { decimals: 0, lo: "reduced" }),
+      NUM("factor_vii", "Factor VII activity", "Specific coagulation factor tests", 50, 150, "%", { decimals: 0, lo: "reduced" }),
+      NUM("factor_x", "Factor X activity", "Specific coagulation factor tests", 50, 150, "%", { decimals: 0, lo: "reduced" }),
+      NUM("factor_ii", "Factor II activity", "Specific coagulation factor tests", 86, 150, "%", { decimals: 0, lo: "reduced" }),
+      CH("factor_xiii", "Factor XIII activity (approval test)", "Specific coagulation factor tests", [_NEG, ["positive", "+ Positive", "abnormal", "The factor XIII screen is positive (soluble clot), indicating factor XIII deficiency."]]),
+      TXT("inhibitor_factor", "Inhibitor screen — factor tested", "Specific coagulation factor tests"),
+      CH("inhibitor_screen", "Inhibitor screen (Bethesda)", "Specific coagulation factor tests", [_NEG, ["positive", "+ Positive", "abnormal", "The factor inhibitor screen is positive (Bethesda units detected)."]]),
+      NUM("closure_epi", "Closure time — EPI", "Specific coagulation factor tests", 85, 169, "sec", { decimals: 0, hi: "prolonged" }),
+      NUM("closure_adp", "Closure time — ADP", "Specific coagulation factor tests", 57, 110, "sec", { decimals: 0, hi: "prolonged" })
     ],
     rules: [
-      { id: "vwd_quantitative", when: { vwf_gp1b: ["decreased"], vwf_ag: ["decreased"] }, impression: "Reduced VWF activity and antigen support von Willebrand disease; proportionally reduced activity and antigen (ratio ≥0.7) favour a quantitative type 1 defect, and factor VIII is often reduced in parallel." },
-      { id: "vwd_qualitative", when: { vwf_gp1b: ["decreased"], vwf_ag: ["normal", "not_done"] }, impression: "Reduced VWF activity with preserved antigen (low activity:antigen ratio, <0.7) suggests a qualitative type 2 von Willebrand defect; confirm with multimer analysis." },
-      { id: "vwd_low_antigen", when: { vwf_ag: ["decreased"], vwf_gp1b: ["normal", "not_done"] }, impression: "Reduced VWF antigen indicates low von Willebrand factor; with proportionally reduced activity this is type 1 von Willebrand disease. Blood group O lowers VWF physiologically." },
+      { id: "vwd_quantitative", when: { vwf_gp1b: ["low"], vwf_ag: ["low"] }, impression: "Reduced VWF activity and antigen support von Willebrand disease; proportionally reduced activity and antigen (ratio ≥0.7) favour a quantitative type 1 defect, and factor VIII is often reduced in parallel." },
+      { id: "vwd_qualitative", when: { vwf_gp1b: ["low"], vwf_ag: ["normal", "not_done"] }, impression: "Reduced VWF activity with preserved antigen (low activity:antigen ratio, <0.7) suggests a qualitative type 2 von Willebrand defect; confirm with multimer analysis." },
+      { id: "vwd_low_antigen", when: { vwf_ag: ["low"], vwf_gp1b: ["normal", "not_done"] }, impression: "Reduced VWF antigen indicates low von Willebrand factor; with proportionally reduced activity this is type 1 von Willebrand disease. Blood group O lowers VWF physiologically." },
       { id: "multimer_abn", when: { multimer: ["abnormal"] }, impression: "An abnormal multimer pattern (loss of high-molecular-weight multimers) supports type 2 von Willebrand disease." },
-      { id: "isolated_pt", when: { pt: ["prolonged"], aptt: ["normal", "not_done"] }, impression: "Isolated PT prolongation points to factor VII deficiency or an early/partial vitamin-K-dependent defect (warfarin, vitamin K deficiency, early liver disease)." },
-      { id: "isolated_aptt", when: { aptt: ["prolonged"], pt: ["normal", "not_done"] }, impression: "Isolated aPTT prolongation indicates an intrinsic-pathway factor deficiency (VIII, IX, XI, or XII) or — with low factor VIII — von Willebrand disease; an inhibitor or lupus anticoagulant is also possible." },
-      { id: "both_pt_aptt", when: { pt: ["prolonged"], aptt: ["prolonged"] }, impression: "Combined PT and aPTT prolongation suggests a common-pathway or multiple-factor process: liver disease, vitamin K deficiency or warfarin, DIC, or a deficiency of factor II, V, or X." },
-      { id: "dic", when: { platelet_count: ["low"], fibrinogen: ["low"], d_dimer: ["elevated"] }, impression: "Thrombocytopenia with low fibrinogen and an elevated D-dimer, in the appropriate setting, is consistent with disseminated intravascular coagulation (DIC)." },
-      { id: "f8_low", when: { factor_viii: ["decreased"] }, impression: "Reduced factor VIII may reflect hemophilia A, von Willebrand disease (factor VIII low secondary to low VWF), or an acquired factor VIII inhibitor." },
-      { id: "f9_low", when: { factor_ix: ["decreased"] }, impression: "Reduced factor IX is consistent with hemophilia B." },
-      { id: "f11_low", when: { factor_xi: ["decreased"] }, impression: "Reduced factor XI (the bleeding risk correlates poorly with the level)." },
-      { id: "f12_low", when: { factor_xii: ["decreased"] }, impression: "Reduced factor XII prolongs the aPTT but is not associated with bleeding." },
-      { id: "f7_low", when: { factor_vii: ["decreased"] }, impression: "Reduced factor VII is an isolated extrinsic-pathway deficiency (prolongs the PT only)." },
-      { id: "f5_low", when: { factor_v: ["decreased"] }, impression: "Reduced factor V (consider combined factor V and VIII deficiency, or liver disease)." },
-      { id: "f10_low", when: { factor_x: ["decreased"] }, impression: "Reduced factor X (consider acquired causes such as amyloidosis)." },
-      { id: "f2_low", when: { factor_ii: ["decreased"] }, impression: "Reduced factor II (prothrombin), which is vitamin-K-dependent; consider warfarin, vitamin K deficiency, or liver disease." },
+      { id: "isolated_pt", when: { pt: ["high"], aptt: ["normal", "not_done"] }, impression: "Isolated PT prolongation points to factor VII deficiency or an early/partial vitamin-K-dependent defect (warfarin, vitamin K deficiency, early liver disease)." },
+      { id: "isolated_aptt", when: { aptt: ["high"], pt: ["normal", "not_done"] }, impression: "Isolated aPTT prolongation indicates an intrinsic-pathway factor deficiency (VIII, IX, XI, or XII) or — with low factor VIII — von Willebrand disease; an inhibitor or lupus anticoagulant is also possible." },
+      { id: "both_pt_aptt", when: { pt: ["high"], aptt: ["high"] }, impression: "Combined PT and aPTT prolongation suggests a common-pathway or multiple-factor process: liver disease, vitamin K deficiency or warfarin, DIC, or a deficiency of factor II, V, or X." },
+      { id: "dic", when: { platelet_count: ["low"], fibrinogen: ["low"], d_dimer: ["high"] }, impression: "Thrombocytopenia with low fibrinogen and an elevated D-dimer, in the appropriate setting, is consistent with disseminated intravascular coagulation (DIC)." },
+      { id: "f8_low", when: { factor_viii: ["low"] }, impression: "Reduced factor VIII may reflect hemophilia A, von Willebrand disease (factor VIII low secondary to low VWF), or an acquired factor VIII inhibitor." },
+      { id: "f9_low", when: { factor_ix: ["low"] }, impression: "Reduced factor IX is consistent with hemophilia B." },
+      { id: "f11_low", when: { factor_xi: ["low"] }, impression: "Reduced factor XI (the bleeding risk correlates poorly with the level)." },
+      { id: "f12_low", when: { factor_xii: ["low"] }, impression: "Reduced factor XII prolongs the aPTT but is not associated with bleeding." },
+      { id: "f7_low", when: { factor_vii: ["low"] }, impression: "Reduced factor VII is an isolated extrinsic-pathway deficiency (prolongs the PT only)." },
+      { id: "f5_low", when: { factor_v: ["low"] }, impression: "Reduced factor V (consider combined factor V and VIII deficiency, or liver disease)." },
+      { id: "f10_low", when: { factor_x: ["low"] }, impression: "Reduced factor X (consider acquired causes such as amyloidosis)." },
+      { id: "f2_low", when: { factor_ii: ["low"] }, impression: "Reduced factor II (prothrombin), which is vitamin-K-dependent; consider warfarin, vitamin K deficiency, or liver disease." },
       { id: "f13_pos", when: { factor_xiii: ["positive"] }, impression: "A positive factor XIII screen indicates factor XIII deficiency — delayed bleeding and poor wound healing with a normal PT and aPTT." },
       { id: "inhibitor", when: { inhibitor_screen: ["positive"] }, impression: "A positive inhibitor screen indicates a specific factor inhibitor; identify the target factor and quantify the Bethesda titer." },
-      { id: "closure_both", when: { closure_epi: ["prolonged"], closure_adp: ["prolonged"] }, impression: "Both PFA closure times are prolonged — von Willebrand disease or a platelet function defect (also seen with significant thrombocytopenia or anemia)." },
-      { id: "closure_epi_only", when: { closure_epi: ["prolonged"], closure_adp: ["normal", "not_done"] }, impression: "A prolonged EPI closure time with a normal ADP closure time is the classic aspirin/NSAID pattern." },
-      { id: "tt_prolonged", when: { thrombin_time: ["prolonged"] }, impression: "A prolonged thrombin time suggests heparin effect, a direct thrombin inhibitor (dabigatran), hypofibrinogenemia, or dysfibrinogenemia." }
+      { id: "closure_both", when: { closure_epi: ["high"], closure_adp: ["high"] }, impression: "Both PFA closure times are prolonged — von Willebrand disease or a platelet function defect (also seen with significant thrombocytopenia or anemia)." },
+      { id: "closure_epi_only", when: { closure_epi: ["high"], closure_adp: ["normal", "not_done"] }, impression: "A prolonged EPI closure time with a normal ADP closure time is the classic aspirin/NSAID pattern." },
+      { id: "tt_prolonged", when: { thrombin_time: ["high"] }, impression: "A prolonged thrombin time suggests heparin effect, a direct thrombin inhibitor (dabigatran), hypofibrinogenemia, or dysfibrinogenemia." }
     ],
     caveats: [
-      { id: "cav_vwf_acute", when: { vwf_gp1b: ["decreased"] }, text: "VWF is an acute-phase reactant raised by stress, inflammation, pregnancy, and estrogen; a single low value should be repeated when the patient is well." }
+      { id: "cav_abo_o", when: { abo: ["O"] }, text: "Blood group O individuals have ~25% lower VWF on average — borderline-low VWF may be physiologic for group O." },
+      { id: "cav_vwf_acute", when: { vwf_gp1b: ["low"] }, text: "VWF is an acute-phase reactant raised by stress, inflammation, pregnancy, and estrogen; a single low value should be repeated when the patient is well." }
     ],
     templates: {
       intro: "Laboratory testing for a bleeding diathesis is performed.",
       concl_none: "No specific bleeding-disorder pattern is identified among the tested analytes; correlate with the clinical bleeding history.",
-      empty: "No bleeding-diathesis panel results have been entered."
+      empty: "No bleeding-disorder results have been entered."
     }
   });
 
   DEFAULT_PANELS.push({
     id: "hypercoagulability",
     title: "Hypercoagulability panel",
-    heading: "HYPERCOAGULABILITY (THROMBOPHILIA) PANEL",
-    signature: "Rachel Brancamp, MD",
-    draft: true,
+    heading: "HYPERCOAGULABILITY REPORT",
+    signature: "Physician signature / date:",
+    interpretation: { label: "Interpretation", options: ["PINA", "PITP", "PIGN", "PICA"] },
     analytes: [
-      A("pt", "PT / INR", "Basic panel", [_N, ["prolonged", "↑ Prolonged", "abnormal", "The PT/INR is prolonged."]]),
-      A("aptt", "aPTT", "Basic panel", [_N, ["prolonged", "↑ Prolonged", "abnormal", "The aPTT is prolonged."]]),
-      A("fibrinogen", "Fibrinogen", "Basic panel", [_N, ["low", "↓ Low", "abnormal", "The fibrinogen is decreased."], ["high", "↑ High", "abnormal", "The fibrinogen is increased (acute-phase reactant)."]]),
-      A("thrombin_time", "Thrombin time", "Basic panel", [_N, ["prolonged", "↑ Prolonged", "abnormal", "The thrombin time is prolonged."]]),
-      A("platelet_count", "Platelet count", "Basic panel", [_N, ["low", "↓ Low", "abnormal", "The platelet count is decreased."], ["high", "↑ High", "abnormal", "The platelet count is increased (consider a myeloproliferative neoplasm)."]]),
-      A("ptt_la", "PTT-LA screen", "Antiphospholipid", [_N, ["prolonged", "↑ Prolonged", "abnormal", "The PTT-LA screen is prolonged."]]),
-      A("hexagonal", "Hexagonal phospholipid confirm", "Antiphospholipid", [_NEG, ["positive", "+ Positive", "abnormal", "The hexagonal-phase phospholipid neutralization is positive (phospholipid-dependent inhibitor)."]]),
-      A("drvvt_screen", "DRVVT screen ratio", "Antiphospholipid", [_N, ["elevated", "↑ ≥1.2", "abnormal", "The DRVVT screen ratio is elevated (≥1.2)."]]),
-      A("drvvt_norm", "DRVVT normalized ratio", "Antiphospholipid", [_N, ["elevated", "↑ ≥1.2", "abnormal", "The DRVVT normalized (screen:confirm) ratio is elevated (≥1.2), confirming phospholipid dependence."]]),
-      A("mix_rosner", "1:1 mix (Rosner index)", "Antiphospholipid", [["corrects", "Corrects (≤8%)", "abnormal", "The 1:1 mix corrects (Rosner ≤8%), favouring a factor deficiency over an inhibitor."], ["incomplete", "Incomplete (≥9%)", "abnormal", "The 1:1 mix shows incomplete correction (Rosner ≥9%), indicating an inhibitor."]]),
-      A("acl_igg", "Anticardiolipin IgG", "Antiphospholipid", [_NEG, ["positive", "+ Positive", "abnormal", "The anticardiolipin IgG is positive."]]),
-      A("acl_igm", "Anticardiolipin IgM", "Antiphospholipid", [_NEG, ["positive", "+ Positive", "abnormal", "The anticardiolipin IgM is positive."]]),
-      A("b2_igg", "Beta-2 glycoprotein-I IgG", "Antiphospholipid", [_NEG, ["positive", "+ Positive", "abnormal", "The anti-β2-glycoprotein-I IgG is positive."]]),
-      A("b2_igm", "Beta-2 glycoprotein-I IgM", "Antiphospholipid", [_NEG, ["positive", "+ Positive", "abnormal", "The anti-β2-glycoprotein-I IgM is positive."]]),
-      A("protein_c_activity", "Protein C activity", "Natural anticoagulants", [_N, ["decreased", "↓ Low", "abnormal", "The protein C activity is reduced."]]),
-      A("protein_c_antigen", "Protein C antigen", "Natural anticoagulants", [_N, ["decreased", "↓ Low", "abnormal", "The protein C antigen is reduced."]]),
-      A("protein_s_activity", "Protein S activity", "Natural anticoagulants", [_N, ["decreased", "↓ Low", "abnormal", "The protein S activity is reduced."]]),
-      A("protein_s_total_ag", "Protein S total antigen", "Natural anticoagulants", [_N, ["decreased", "↓ Low", "abnormal", "The protein S total antigen is reduced."]]),
-      A("protein_s_free_ag", "Protein S free antigen", "Natural anticoagulants", [_N, ["decreased", "↓ Low", "abnormal", "The protein S free antigen is reduced."]]),
-      A("at3_activity", "Antithrombin activity", "Natural anticoagulants", [_N, ["decreased", "↓ Low", "abnormal", "The antithrombin activity is reduced."]]),
-      A("at3_antigen", "Antithrombin antigen", "Natural anticoagulants", [_N, ["decreased", "↓ Low", "abnormal", "The antithrombin antigen is reduced."]]),
-      A("apcr", "Activated protein C resistance", "APC resistance", [["normal", "Normal (≥2.0)", "normal"], ["reduced", "↓ Resistant (<2.0)", "abnormal", "Activated protein C resistance is present (ratio <2.0)."]]),
-      A("apcr_norm", "Normalized APCR ratio", "APC resistance", [["normal", "Normal (>0.84)", "normal"], ["reduced", "↓ Low (≤0.84)", "abnormal", "The normalized APC-resistance ratio is reduced (≤0.84)."]]),
-      A("factor_viii", "Factor VIII activity", "Factor activity", [_N, ["decreased", "↓ Low", "abnormal", "The factor VIII activity is reduced."], ["elevated", "↑ High", "abnormal", "The factor VIII activity is elevated."]]),
-      A("factor_xi", "Factor XI activity", "Factor activity", [_N, ["decreased", "↓ Low", "abnormal", "The factor XI activity is reduced."], ["elevated", "↑ High", "abnormal", "The factor XI activity is elevated (a weaker thrombosis risk factor)."]])
+      NUM("pt", "Prothrombin time / INR", "Basic panel", 12.1, 14.5, "sec", { hi: "prolonged", note: "Triage samples: PT>19, INR>2.0" }),
+      NUM("aptt", "Activated partial thromboplastin", "Basic panel", 22, 36, "sec", { hi: "prolonged" }),
+      NUM("fibrinogen", "Fibrinogen", "Basic panel", 200, 450, "mg/dL", { decimals: 0, lo: "decreased", hi: "increased" }),
+      NUM("thrombin_time", "Thrombin time", "Basic panel", 15, 25, "sec", { hi: "prolonged", note: "Reflex with elevated aPTT" }),
+      NUM("platelet_count", "Platelet count", "Basic panel", 150, 450, "K/µL", { decimals: 0, lo: "decreased", hi: "increased" }),
+      NUM("ptt_la", "PTT-LA screen", "Antiphospholipid antibody panel", 30.3, 43.2, "sec", { hi: "prolonged" }),
+      CH("hexagonal", "Hexagonal confirm", "Antiphospholipid antibody panel", [_NEG, ["positive", "+ Positive", "abnormal", "The hexagonal-phase phospholipid neutralization is positive (phospholipid-dependent inhibitor)."]]),
+      NUM("rvv_screen", "RVV screen ratio", "Antiphospholipid antibody panel", null, 1.2, "", { hi: "elevated", ref: "<1.2", hiReport: "The DRVVT screen ratio is elevated ({val})." }),
+      NUM("rvv_norm", "RVV normalized ratio", "Antiphospholipid antibody panel", null, 1.2, "", { hi: "elevated", ref: "<1.2", hiReport: "The DRVVT normalized ratio is elevated ({val}), confirming phospholipid dependence." }),
+      NUM("mix_npp", "Immediate mix — NPP", "Antiphospholipid antibody panel", null, null, "sec", {}),
+      NUM("mix_11", "Immediate mix — 1:1 mix", "Antiphospholipid antibody panel", null, null, "sec", {}),
+      NUM("mix_patient", "Immediate mix — patient", "Antiphospholipid antibody panel", null, null, "sec", {}),
+      NUM("mix_diff", "Difference (1:1 mix − NPP)", "Antiphospholipid antibody panel", null, null, "sec", {}),
+      CH("mix_rosner", "Rosner index", "Antiphospholipid antibody panel", [["correction", "≤8% Correction", "normal"], ["incomplete", "≥9% Incomplete", "abnormal", "The 1:1 mix shows incomplete correction (Rosner index ≥9%), indicating an inhibitor."], ["partial", "Partial correction", "abnormal", "The 1:1 mix shows only partial correction."]]),
+      NUM("acl_igg", "Anticardiolipin IgG", "Antiphospholipid antibody panel", null, 10, "GPL", { sig: 40, hi: "positive", ref: "<10.0 GPL" }),
+      NUM("acl_igm", "Anticardiolipin IgM", "Antiphospholipid antibody panel", null, 10, "MPL", { sig: 40, hi: "positive", ref: "<10.0 MPL" }),
+      NUM("b2_igg", "Beta-2 glycoprotein I IgG", "Antiphospholipid antibody panel", null, 7, "U/mL", { sig: 40, hi: "positive", ref: "<7.0 U/mL" }),
+      NUM("b2_igm", "Beta-2 glycoprotein I IgM", "Antiphospholipid antibody panel", null, 7, "U/mL", { sig: 40, hi: "positive", ref: "<7.0 U/mL" }),
+      NUM("protein_c_activity", "Protein C activity", "Natural anticoagulant panel", 70, 140, "%", { decimals: 0, lo: "reduced" }),
+      NUM("protein_c_antigen", "Protein C antigen", "Natural anticoagulant panel", 72, 160, "%", { decimals: 0, lo: "reduced" }),
+      NUM("protein_s_activity", "Protein S activity", "Natural anticoagulant panel", 55, 140, "%", { decimals: 0, lo: "reduced" }),
+      NUM("protein_s_total_ag", "Protein S total antigen", "Natural anticoagulant panel", 50, 140, "%", { decimals: 0, lo: "reduced" }),
+      NUM("protein_s_free_ag", "Protein S free antigen", "Natural anticoagulant panel", 50, 130, "%", { decimals: 0, lo: "reduced" }),
+      NUM("at3_activity", "Antithrombin III activity", "Natural anticoagulant panel", 80, 120, "%", { decimals: 0, lo: "reduced" }),
+      NUM("at3_antigen", "Antithrombin antigen", "Natural anticoagulant panel", 80, 120, "%", { decimals: 0, lo: "reduced" }),
+      NUM("apcr", "Activated protein C resistance", "Activated protein C resistance", 2.0, null, "", { lo: "reduced", ref: "≥ 2.0", loReport: "Activated protein C resistance is present (ratio {val}, <2.0)." }),
+      NUM("apcr_norm", "Normalized APCR ratio", "Activated protein C resistance", 0.84, null, "", { lo: "reduced", ref: ">0.84", loReport: "The normalized APC-resistance ratio is reduced ({val}, ≤0.84)." }),
+      NUM("factor_viii", "Factor VIII activity", "Factor activity", 50, 150, "%", { decimals: 0, lo: "reduced", hi: "elevated" }),
+      NUM("factor_xi", "Factor XI activity", "Factor activity", 50, 150, "%", { decimals: 0, lo: "reduced", hi: "elevated" })
     ],
     rules: [
-      { id: "pc_low", when: { protein_c_activity: ["decreased"] }, impression: "Reduced protein C — interpret off vitamin K antagonists (warfarin lowers it) and away from acute thrombosis, liver disease, and DIC." },
-      { id: "ps_low_activity", when: { protein_s_activity: ["decreased"] }, impression: "Reduced protein S activity — lowered by warfarin, pregnancy, estrogen, acute thrombosis, and inflammation; confirm with free antigen at steady state." },
-      { id: "ps_low_free", when: { protein_s_free_ag: ["decreased"] }, impression: "Reduced free protein S antigen supports protein S deficiency once acquired causes (warfarin, pregnancy, estrogen, acute event) are excluded." },
-      { id: "at_low", when: { at3_activity: ["decreased"] }, impression: "Reduced antithrombin — confirm at steady state. It is consumed in acute thrombosis, DIC, and sepsis, lowered by heparin, and reduced in liver disease and nephrotic syndrome." },
-      { id: "apcr_reduced", when: { apcr: ["reduced"] }, impression: "Reduced activated protein C resistance is most often due to factor V Leiden; confirm with factor V Leiden genotyping." },
-      { id: "apcr_norm_reduced", when: { apcr_norm: ["reduced"] }, impression: "A low normalized APC-resistance ratio (≤0.84) supports APC resistance; reflex to factor V Leiden genotyping." },
+      { id: "pc_low", when: { protein_c_activity: ["low"] }, impression: "Reduced protein C — interpret off vitamin K antagonists (warfarin lowers it) and away from acute thrombosis, liver disease, and DIC." },
+      { id: "ps_low_activity", when: { protein_s_activity: ["low"] }, impression: "Reduced protein S activity — lowered by warfarin, pregnancy, estrogen, acute thrombosis, and inflammation; confirm with free antigen at steady state." },
+      { id: "ps_low_free", when: { protein_s_free_ag: ["low"] }, impression: "Reduced free protein S antigen supports protein S deficiency once acquired causes (warfarin, pregnancy, estrogen, acute event) are excluded." },
+      { id: "at_low", when: { at3_activity: ["low"] }, impression: "Reduced antithrombin — confirm at steady state. It is consumed in acute thrombosis, DIC, and sepsis, lowered by heparin, and reduced in liver disease and nephrotic syndrome." },
+      { id: "apcr_reduced", when: { apcr: ["low"] }, impression: "Reduced activated protein C resistance is most often due to factor V Leiden; confirm with factor V Leiden genotyping." },
+      { id: "apcr_norm_reduced", when: { apcr_norm: ["low"] }, impression: "A low normalized APC-resistance ratio (≤0.84) supports APC resistance; reflex to factor V Leiden genotyping." },
       { id: "la_hex", when: { hexagonal: ["positive"] }, impression: "A positive hexagonal-phase phospholipid neutralization confirms a phospholipid-dependent inhibitor (lupus anticoagulant). A single positive must be confirmed on a repeat sample at least 12 weeks apart." },
-      { id: "la_drvvt", when: { drvvt_norm: ["elevated"] }, impression: "An elevated DRVVT normalized ratio supports a lupus anticoagulant (Russell-viper-venom method)." },
-      { id: "la_mix", when: { ptt_la: ["prolonged"], mix_rosner: ["incomplete"] }, impression: "A prolonged PTT-LA with incomplete mix correction (Rosner ≥9%) indicates an inhibitor — most often a lupus anticoagulant in this setting (exclude a specific factor inhibitor and heparin/DOAC)." },
-      { id: "acl_pos", when: { acl_igg: ["positive"] }, impression: "Anticardiolipin IgG positivity is one antiphospholipid criterion; a medium-to-high titer persistent at ≥12 weeks supports antiphospholipid syndrome." },
-      { id: "b2_pos", when: { b2_igg: ["positive"] }, impression: "Anti-β2-glycoprotein-I IgG positivity is one antiphospholipid criterion; confirm persistence at ≥12 weeks." },
-      { id: "aps_triple", when: { hexagonal: ["positive"], acl_igg: ["positive"], b2_igg: ["positive"] }, impression: "Triple-positive antiphospholipid serology (lupus anticoagulant plus anticardiolipin plus anti-β2GPI) carries the highest thrombotic risk and recurrence rate; direct oral anticoagulants are discouraged." },
-      { id: "f8_high", when: { factor_viii: ["elevated"] }, impression: "Persistently elevated factor VIII is a thrombosis risk factor, but factor VIII is also an acute-phase reactant — confirm away from acute illness." },
-      { id: "all_neg", when: { protein_c_activity: ["normal"], protein_s_activity: ["normal"], at3_activity: ["normal"], apcr: ["normal"], hexagonal: ["negative", "not_done"], acl_igg: ["negative", "not_done"], b2_igg: ["negative", "not_done"] }, impression: "No inherited or acquired thrombophilia is detected among the analytes tested." }
+      { id: "la_drvvt", when: { rvv_norm: ["high"] }, impression: "An elevated DRVVT normalized ratio supports a lupus anticoagulant (Russell-viper-venom method)." },
+      { id: "la_mix", when: { ptt_la: ["high"], mix_rosner: ["incomplete"] }, impression: "A prolonged PTT-LA with incomplete mix correction (Rosner index ≥9%) indicates an inhibitor — most often a lupus anticoagulant in this setting (exclude a specific factor inhibitor and heparin/DOAC)." },
+      { id: "acl_pos", when: { acl_igg: ["high", "sig"] }, impression: "Anticardiolipin IgG positivity is one antiphospholipid criterion; a medium-to-high titer persistent at ≥12 weeks supports antiphospholipid syndrome." },
+      { id: "b2_pos", when: { b2_igg: ["high", "sig"] }, impression: "Anti-β2-glycoprotein-I IgG positivity is one antiphospholipid criterion; confirm persistence at ≥12 weeks." },
+      { id: "aps_triple", when: { hexagonal: ["positive"], acl_igg: ["high", "sig"], b2_igg: ["high", "sig"] }, impression: "Triple-positive antiphospholipid serology (lupus anticoagulant plus anticardiolipin plus anti-β2GPI) carries the highest thrombotic risk and recurrence rate; direct oral anticoagulants are discouraged." },
+      { id: "f8_high", when: { factor_viii: ["high"] }, impression: "Persistently elevated factor VIII is a thrombosis risk factor, but factor VIII is also an acute-phase reactant — confirm away from acute illness." },
+      { id: "all_neg", when: { protein_c_activity: ["normal"], protein_s_activity: ["normal"], at3_activity: ["normal"], apcr: ["normal"], hexagonal: ["negative", "not_done"], acl_igg: ["normal", "not_done"], b2_igg: ["normal", "not_done"] }, impression: "No inherited or acquired thrombophilia is detected among the analytes tested." }
     ],
     caveats: [],
     templates: {
       intro: "Laboratory testing for a hypercoagulable state (thrombophilia) is performed.",
       concl_none: "No specific thrombophilia pattern is identified among the tested analytes; correlate with the clinical picture and the timing of testing.",
-      empty: "No hypercoagulability panel results have been entered."
+      empty: "No hypercoagulability results have been entered."
     }
   });
 
@@ -389,6 +439,7 @@ input, button, textarea, select { font-size: 1rem; }
     if (value === "" || value === null || value === undefined) return { kind: "none", symbol: "" };
     if (!isFinite(Number(value))) return { kind: "invalid", symbol: "⚠" };
     var v = Number(value);
+    if (analyte.low == null && analyte.high == null && analyte.sig == null) return { kind: "none", symbol: "" }; // informational (no range)
     if (analyte.sig != null && v > analyte.sig) return { kind: "sig", symbol: "‼" };
     if (analyte.high != null && v > analyte.high) return { kind: "high", symbol: "↑" };
     if (analyte.low != null && v < analyte.low) return { kind: "low", symbol: "↓" };
@@ -528,18 +579,22 @@ input, button, textarea, select { font-size: 1rem; }
     var t = panel.templates || {};
     var normals = [], abnormal = [], sv = {}, anyEntered = false;
     (panel.analytes || []).forEach(function (a) {
-      var val;
       if (a.type === "number") {
         if (!isNum(values[a.id])) { sv[a.id] = "not_done"; return; }
         var st = classifyNumber(a, values[a.id]);
-        val = st.kind === "normal" ? "normal" : (st.kind === "low" ? "low" : "high");
-        sv[a.id] = val; anyEntered = true;
+        if (st.kind === "none" || st.kind === "invalid") { sv[a.id] = "not_done"; return; }   // informational / bad input
+        sv[a.id] = st.kind;                                                                    // normal | low | high | sig
+        anyEntered = true;
+        if (st.kind === "normal") { normals.push(a.label); return; }
         var disp = fmt(a, values[a.id]) + (a.unit === "%" ? "%" : (a.unit ? " " + a.unit : ""));
-        if (st.kind === "normal") normals.push(a.label);
-        else abnormal.push(a.report || ("The " + a.label + " (" + disp + ") is " + (st.kind === "low" ? "decreased." : "increased.")));
+        if (st.kind === "low") abnormal.push(a.loReport ? fill(a.loReport, { val: fmt(a, values[a.id]) }) : ("The " + a.label + " (" + disp + ") is " + (a.loWord || "decreased") + "."));
+        else abnormal.push(a.hiReport ? fill(a.hiReport, { val: fmt(a, values[a.id]) }) : ("The " + a.label + " (" + disp + ") is " + (a.hiWord || "increased") + "."));
         return;
       }
-      val = values[a.id] || "not_done"; sv[a.id] = val;
+      if (a.type === "select" || a.type === "text") {   // context only — captured for rules/caveats, not reported as a finding
+        var sval = values[a.id]; sv[a.id] = (sval == null || sval === "") ? "not_done" : sval; return;
+      }
+      var val = values[a.id] || "not_done"; sv[a.id] = val;
       var opt = (a.options || []).filter(function (o) { return o.v === val; })[0];
       if (!opt || opt.kind === "skip") return;
       anyEntered = true;
@@ -578,7 +633,10 @@ input, button, textarea, select { font-size: 1rem; }
     if (d.collected) idbits.push("Collected " + d.collected);
     if (idbits.length) demoLines.push(idbits.join("   "));
     var headerBlock = (demoLines.length ? demoLines.join("\n") + "\n\n" : "");
-    return { heading: heading, body: body, signature: panel.signature || "", header: headerBlock, full: headerBlock + heading + "\n\n" + body + sig + "\n" };
+    var interpLine = (d._interp && panel.interpretation) ? "Interpretation: " + d._interp + "\n\n" : "";
+    var v2 = values || {};
+    if (!interpLine && v2._interp && panel.interpretation) interpLine = "Interpretation: " + v2._interp + "\n\n";
+    return { heading: heading, body: body, signature: panel.signature || "", header: headerBlock, full: headerBlock + heading + "\n\n" + interpLine + body + sig + "\n" };
   }
 
   var api = {
@@ -648,7 +706,9 @@ input, button, textarea, select { font-size: 1rem; }
       return panel;
     });
   }
-  function getPanel(id) { return mergedPanels().filter(function (p) { return p.id === id; })[0] || mergedPanels()[0]; }
+  function getPanel(id) { return mergedPanels().filter(function (p) { return p.id === id; })[0] || visiblePanels()[0] || mergedPanels()[0]; }
+  function visiblePanels() { return mergedPanels().filter(function (p) { return !p.hidden; }); }
+  function defaultPanelId() { var v = visiblePanels(); return v[0] ? v[0].id : "bleeding_diathesis"; }
 
   // ---------- batches & patients ----------
   function currentBatch() { return store.batches.filter(function (b) { return b.id === store.currentBatchId; })[0] || null; }
@@ -664,7 +724,7 @@ input, button, textarea, select { font-size: 1rem; }
     var p = {
       id: uid(),
       demo: copyFrom ? Object.assign({}, copyFrom.demo, { name: "", mrn: "", accession: "" }) : { name: "", mrn: "", accession: "", dob: "", collected: nowDate() },
-      panelId: copyFrom ? copyFrom.panelId : (b.patients[0] ? b.patients[0].panelId : "vwd"),
+      panelId: copyFrom ? copyFrom.panelId : (b.patients[0] ? b.patients[0].panelId : defaultPanelId()),
       values: {}, createdAt: Date.now(), updatedAt: Date.now()
     };
     b.patients.unshift(p); store.currentPatientId = p.id; store.view = "patient"; save();
@@ -791,7 +851,7 @@ input, button, textarea, select { font-size: 1rem; }
 
   function panelCard(p) {
     var pick = h("div", { class: "panelpick" });
-    mergedPanels().forEach(function (panel) {
+    visiblePanels().forEach(function (panel) {
       pick.appendChild(h("button", { class: "btn", "aria-pressed": p.panelId === panel.id ? "true" : "false", onClick: function () { p.panelId = panel.id; p.updatedAt = Date.now(); render(); } }, panel.title));
     });
     return h("section", { class: "card" }, h("h2", {}, "Report type"), pick);
@@ -799,36 +859,74 @@ input, button, textarea, select { font-size: 1rem; }
 
   function entryCard(p, panel) {
     var card = h("section", { class: "card" }, h("h2", {}, "Results"));
-    panel.analytes.forEach(function (a) { if (visible(a, p.values)) card.appendChild(analyteRow(p, panel, a)); });
+    if (panel.interpretation) card.appendChild(interpRow(p, panel));
+    // Column header row, then sectioned rows — mirrors the paper form.
+    var table = h("div", { class: "formtable" });
+    table.appendChild(h("div", { class: "formhead" }, h("span", {}, "Test"), h("span", {}, "Result"), h("span", {}, "Reference")));
+    var lastGroup = null;
+    panel.analytes.forEach(function (a) {
+      if (!visible(a, p.values)) return;
+      if (a.group && a.group !== lastGroup) { table.appendChild(h("div", { class: "formgroup" }, a.group)); lastGroup = a.group; }
+      table.appendChild(formRow(p, panel, a));
+    });
+    card.appendChild(table);
     return card;
   }
 
-  function analyteRow(p, panel, a) {
-    var color = E.colorOf(E.classify(a, p.values[a.id]).kind);
-    var row = h("div", { class: "arow " + color, id: "row_" + a.id });
-    var refTxt = a.type === "number"
-      ? "Ref: " + (a.low != null ? a.low : "") + (a.low != null && a.high != null ? "–" : "") + (a.high != null ? a.high : (a.high == null && a.low != null ? "+" : "")) + (a.unit ? " " + a.unit : "") + (a.sig != null ? "  ·  significant >" + a.sig : "") : "";
-    row.appendChild(h("div", {}, h("div", { class: "alabel" }, a.label), refTxt ? h("div", { class: "aref" }, refTxt) : null));
-    var ctl = h("div", { class: "actl" });
+  function interpRow(p, panel) {
+    var seg = h("div", { class: "interp-seg", role: "group", "aria-label": panel.interpretation.label });
+    panel.interpretation.options.forEach(function (code) {
+      seg.appendChild(h("button", { type: "button", class: "interp-opt", "aria-pressed": p.values._interp === code ? "true" : "false",
+        onClick: function () { p.values._interp = (p.values._interp === code ? "" : code); p.updatedAt = Date.now(); render(); } }, code));
+    });
+    return h("div", { class: "interp-row" }, h("span", { class: "interp-label" }, panel.interpretation.label + ":"), seg);
+  }
+
+  function refText(a) {
+    if (a.ref) return a.ref;
     if (a.type === "number") {
-      var inp = h("input", { type: "number", inputmode: "decimal", step: a.decimals ? "0.1" : "1", value: p.values[a.id] != null ? p.values[a.id] : "", "aria-label": a.label, id: "in_" + a.id });
-      inp.addEventListener("input", function () { setValue(p, a.id, inp.value); });
-      function bump(d) { var v = Number(inp.value || 0) + d; v = a.decimals ? Math.round(v * 10) / 10 : v; inp.value = v; setValue(p, a.id, inp.value); }
-      ctl.appendChild(h("div", { class: "num" },
-        h("button", { type: "button", "aria-label": "decrease " + a.label, onClick: function () { bump(a.decimals ? -0.1 : -1); } }, "−"),
-        inp, h("button", { type: "button", "aria-label": "increase " + a.label, onClick: function () { bump(a.decimals ? 0.1 : 1); } }, "＋")));
-      if (a.unit) ctl.appendChild(h("span", { class: "unit" }, a.unit));
-      ctl.appendChild(chipFor(a, p.values[a.id]));
-    } else {
-      var chg = h("div", { class: "choice", role: "group", "aria-label": a.label });
-      (a.options || []).forEach(function (o) {
-        chg.appendChild(h("button", { type: "button", "data-kind": o.kind, "aria-pressed": p.values[a.id] === o.v ? "true" : "false",
-          onClick: function () { p.values[a.id] = (p.values[a.id] === o.v ? "" : o.v); p.updatedAt = Date.now(); pruneHidden(p, getPanel(p.panelId)); render(); } }, o.label));
-      });
-      ctl.appendChild(chg);
+      var u = a.unit ? " " + a.unit : "";
+      if (a.low != null && a.high != null) return a.low + "–" + a.high + u;
+      if (a.high != null) return "<" + a.high + u;
+      if (a.low != null) return "≥ " + a.low + u;
+      return "";
     }
-    row.appendChild(ctl);
-    return row;
+    if (a.type === "choice" && (a.options || []).some(function (o) { return o.v === "negative"; })) return "negative";
+    return "";
+  }
+
+  function control(p, panel, a) {
+    if (a.type === "number") {
+      var inp = h("input", { class: "fnum", type: "number", inputmode: "decimal", step: a.decimals ? "0.1" : "1", value: p.values[a.id] != null ? p.values[a.id] : "", "aria-label": a.label, id: "in_" + a.id });
+      inp.addEventListener("input", function () { setValue(p, a.id, inp.value); });
+      return h("span", { class: "fnum-wrap" }, inp, chipFor(a, p.values[a.id]));
+    }
+    if (a.type === "select") {
+      var sel = h("select", { class: "fselect", "aria-label": a.label });
+      (a.options || []).forEach(function (o) { var op = h("option", { value: o.v }, o.label); if ((p.values[a.id] || "") === o.v) op.setAttribute("selected", ""); sel.appendChild(op); });
+      sel.addEventListener("change", function () { p.values[a.id] = sel.value; p.updatedAt = Date.now(); save(); refreshReport(p); });
+      return sel;
+    }
+    if (a.type === "text") {
+      var t = h("input", { class: "ftext", type: "text", value: p.values[a.id] || "", "aria-label": a.label });
+      t.addEventListener("input", function () { p.values[a.id] = t.value; p.updatedAt = Date.now(); save(); refreshReport(p); });
+      return t;
+    }
+    var ch = h("div", { class: "fchoice", role: "group", "aria-label": a.label });
+    (a.options || []).forEach(function (o) {
+      ch.appendChild(h("button", { type: "button", "data-kind": o.kind, "aria-pressed": p.values[a.id] === o.v ? "true" : "false",
+        onClick: function () { p.values[a.id] = (p.values[a.id] === o.v ? "" : o.v); p.updatedAt = Date.now(); render(); } }, o.label));
+    });
+    return ch;
+  }
+
+  function formRow(p, panel, a) {
+    var colorable = a.type === "number" || a.type === "choice";
+    var color = colorable ? E.colorOf(E.classify(a, p.values[a.id]).kind) : "neutral";
+    return h("div", { class: "formrow " + color, id: "row_" + a.id },
+      h("div", { class: "fname" }, a.label, a.note ? h("div", { class: "fnote" }, a.note) : null),
+      h("div", { class: "fresult" }, control(p, panel, a)),
+      h("div", { class: "fref" }, refText(a)));
   }
 
   function chipFor(a, val) {
@@ -841,7 +939,7 @@ input, button, textarea, select { font-size: 1rem; }
     p.values[id] = val; p.updatedAt = Date.now(); save();
     var a = getPanel(p.panelId).analytes.filter(function (x) { return x.id === id; })[0];
     var row = document.getElementById("row_" + id);
-    if (row && a) { row.className = "arow " + E.colorOf(E.classify(a, val).kind); var chip = document.getElementById("chip_" + id); if (chip) chip.replaceWith(chipFor(a, val)); }
+    if (row && a) { row.className = "formrow " + E.colorOf(E.classify(a, val).kind); var chip = document.getElementById("chip_" + id); if (chip) chip.replaceWith(chipFor(a, val)); }
     refreshReport(p); refreshSidebarDot(p);
   }
   function refreshSidebarDot(p) {
@@ -938,7 +1036,7 @@ input, button, textarea, select { font-size: 1rem; }
         h("button", { class: "btn", onClick: exportCasebook }, "⬇ Export casebook (.json)"),
         (function () { var inp = h("input", { type: "file", accept: ".json", style: "display:none", onChange: function (e) { if (e.target.files[0]) importCasebook(e.target.files[0]); } }); return h("span", {}, h("button", { class: "btn", onClick: function () { inp.click(); } }, "⬆ Import casebook"), inp); })(),
         h("button", { class: "btn ghost", onClick: function () { if (confirm("Reset template/range customizations to defaults? (Patients are kept.)")) { store.config = { panels: {} }; render(); } } }, "↺ Reset templates"))));
-    mergedPanels().forEach(function (panel) {
+    visiblePanels().forEach(function (panel) {
       store.config.panels[panel.id] = store.config.panels[panel.id] || {}; var cfg = store.config.panels[panel.id]; cfg.ranges = cfg.ranges || {};
       var sec = h("section", { class: "card full" }, h("h2", {}, "Edit: " + panel.title));
       sec.appendChild(h("div", { class: "tpl-row" }, h("label", {}, "Signature line"), h("input", { class: "range", style: "width:280px;min-height:40px", value: panel.signature || "", onInput: function (e) { cfg.signature = e.target.value; save(); } })));
