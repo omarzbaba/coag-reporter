@@ -305,7 +305,6 @@ input, button, textarea, select { font-size: 1rem; }
     title: "Bleeding diathesis panel",
     heading: "BLEEDING DISORDER REPORT",
     signature: "Physician signature / date:",
-    interpretation: { label: "Interpretation", options: ["PIVW", "PIGN"] },
     analytes: [
       NUM("pt", "Prothrombin time / INR", "Basic coagulation tests", 12.1, 14.5, "sec", { hi: "prolonged" }),
       NUM("aptt", "Activated partial thromboplastin time", "Basic coagulation tests", 22, 36, "sec", { hi: "prolonged" }),
@@ -370,7 +369,6 @@ input, button, textarea, select { font-size: 1rem; }
     title: "Hypercoagulability panel",
     heading: "HYPERCOAGULABILITY REPORT",
     signature: "Physician signature / date:",
-    interpretation: { label: "Interpretation", options: ["PINA", "PITP", "PIGN", "PICA"] },
     cols2: ["Antiphospholipid antibody panel"],
     analytes: [
       NUM("pt", "Prothrombin time / INR", "Basic panel", 12.1, 14.5, "sec", { hi: "prolonged", note: "Triage samples: PT>19, INR>2.0" }),
