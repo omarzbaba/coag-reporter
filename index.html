@@ -166,9 +166,24 @@ input, button, textarea, select { font-size: 1rem; }
 .fchoice button[aria-pressed="true"][data-kind="normal"] { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok-ink); }
 .fchoice button[aria-pressed="true"][data-kind="abnormal"] { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn-ink); }
 .formrow .chip { min-width: 0; padding: 4px 8px; font-size: 11px; }
+/* two-column section (antiphospholipid panel, to mirror the form) */
+.formgroup-2col { display: grid; grid-template-columns: 1fr 1fr; }
+.fcol { display: flex; flex-direction: column; }
+.fcol:first-child { border-right: 1px solid var(--line); }
+.fsub { font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-muted); padding: 8px 12px 2px; }
+.formrow2 { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 6px 12px; border-top: 1px solid var(--line); border-left: 5px solid transparent; }
+.formrow2.ok { border-left-color: var(--ok-line); }
+.formrow2.warn { border-left-color: var(--warn-line); background: var(--warn-bg); }
+.formrow2.bad { border-left-color: var(--bad-line); background: var(--bad-bg); }
+.formrow2.neutral { border-left-color: var(--neutral-line); }
+.formrow2 .fname { font-size: 13.5px; }
+.formrow2 .fnum { width: 78px; min-height: 40px; font-size: 16px; }
+.formrow2 .fchoice button { min-height: 40px; padding: 0 10px; font-size: 12px; }
 @media (max-width: 560px) {
   .formhead { display: none; }
   .formrow { grid-template-columns: 1fr; gap: 4px; }
+  .formgroup-2col { grid-template-columns: 1fr; }
+  .fcol:first-child { border-right: none; border-bottom: 1px solid var(--line); }
 }
 
 /* ---- print (single OR batch — both go through the .print-batch overlay) ---- */
@@ -281,7 +296,7 @@ input, button, textarea, select { font-size: 1rem; }
     o = o || {};
     return { id: id, label: label, group: group, type: "number", low: low, high: high, unit: unit,
       decimals: o.decimals != null ? o.decimals : 1, sig: o.sig != null ? o.sig : null,
-      hiWord: o.hi, loWord: o.lo, hiReport: o.hiReport, loReport: o.loReport, note: o.note, ref: o.ref };
+      hiWord: o.hi, loWord: o.lo, hiReport: o.hiReport, loReport: o.loReport, note: o.note, ref: o.ref, col: o.col, sub: o.sub };
   }
   var _N = ["normal", "Normal", "normal"], _NEG = ["negative", "Negative", "normal"];
 
@@ -356,25 +371,26 @@ input, button, textarea, select { font-size: 1rem; }
     heading: "HYPERCOAGULABILITY REPORT",
     signature: "Physician signature / date:",
     interpretation: { label: "Interpretation", options: ["PINA", "PITP", "PIGN", "PICA"] },
+    cols2: ["Antiphospholipid antibody panel"],
     analytes: [
       NUM("pt", "Prothrombin time / INR", "Basic panel", 12.1, 14.5, "sec", { hi: "prolonged", note: "Triage samples: PT>19, INR>2.0" }),
       NUM("aptt", "Activated partial thromboplastin", "Basic panel", 22, 36, "sec", { hi: "prolonged" }),
       NUM("fibrinogen", "Fibrinogen", "Basic panel", 200, 450, "mg/dL", { decimals: 0, lo: "decreased", hi: "increased" }),
       NUM("thrombin_time", "Thrombin time", "Basic panel", 15, 25, "sec", { hi: "prolonged", note: "Reflex with elevated aPTT" }),
       NUM("platelet_count", "Platelet count", "Basic panel", 150, 450, "K/µL", { decimals: 0, lo: "decreased", hi: "increased" }),
-      NUM("ptt_la", "PTT-LA screen", "Antiphospholipid antibody panel", 30.3, 43.2, "sec", { hi: "prolonged" }),
-      CH("hexagonal", "Hexagonal confirm", "Antiphospholipid antibody panel", [_NEG, ["positive", "+ Positive", "abnormal", "The hexagonal-phase phospholipid neutralization is positive (phospholipid-dependent inhibitor)."]]),
-      NUM("rvv_screen", "RVV screen ratio", "Antiphospholipid antibody panel", null, 1.2, "", { hi: "elevated", ref: "<1.2", hiReport: "The DRVVT screen ratio is elevated ({val})." }),
-      NUM("rvv_norm", "RVV normalized ratio", "Antiphospholipid antibody panel", null, 1.2, "", { hi: "elevated", ref: "<1.2", hiReport: "The DRVVT normalized ratio is elevated ({val}), confirming phospholipid dependence." }),
-      NUM("mix_npp", "Immediate mix — NPP", "Antiphospholipid antibody panel", null, null, "sec", {}),
-      NUM("mix_11", "Immediate mix — 1:1 mix", "Antiphospholipid antibody panel", null, null, "sec", {}),
-      NUM("mix_patient", "Immediate mix — patient", "Antiphospholipid antibody panel", null, null, "sec", {}),
-      NUM("mix_diff", "Difference (1:1 mix − NPP)", "Antiphospholipid antibody panel", null, null, "sec", {}),
-      CH("mix_rosner", "Rosner index", "Antiphospholipid antibody panel", [["correction", "≤8% Correction", "normal"], ["incomplete", "≥9% Incomplete", "abnormal", "The 1:1 mix shows incomplete correction (Rosner index ≥9%), indicating an inhibitor."], ["partial", "Partial correction", "abnormal", "The 1:1 mix shows only partial correction."]]),
-      NUM("acl_igg", "Anticardiolipin IgG", "Antiphospholipid antibody panel", null, 10, "GPL", { sig: 40, hi: "positive", ref: "<10.0 GPL" }),
-      NUM("acl_igm", "Anticardiolipin IgM", "Antiphospholipid antibody panel", null, 10, "MPL", { sig: 40, hi: "positive", ref: "<10.0 MPL" }),
-      NUM("b2_igg", "Beta-2 glycoprotein I IgG", "Antiphospholipid antibody panel", null, 7, "U/mL", { sig: 40, hi: "positive", ref: "<7.0 U/mL" }),
-      NUM("b2_igm", "Beta-2 glycoprotein I IgM", "Antiphospholipid antibody panel", null, 7, "U/mL", { sig: 40, hi: "positive", ref: "<7.0 U/mL" }),
+      NUM("ptt_la", "PTT-LA screen", "Antiphospholipid antibody panel", 30.3, 43.2, "sec", { hi: "prolonged", col: 1 }),
+      CH("hexagonal", "Hexagonal confirm", "Antiphospholipid antibody panel", [_NEG, ["positive", "+ Positive", "abnormal", "The hexagonal-phase phospholipid neutralization is positive (phospholipid-dependent inhibitor)."]], { col: 1 }),
+      NUM("rvv_screen", "RVV screen ratio", "Antiphospholipid antibody panel", null, 1.2, "", { hi: "elevated", ref: "<1.2", hiReport: "The DRVVT screen ratio is elevated ({val}).", col: 2 }),
+      NUM("rvv_norm", "RVV normalized ratio", "Antiphospholipid antibody panel", null, 1.2, "", { hi: "elevated", ref: "<1.2", hiReport: "The DRVVT normalized ratio is elevated ({val}), confirming phospholipid dependence.", col: 2 }),
+      NUM("mix_npp", "NPP", "Antiphospholipid antibody panel", null, null, "sec", { col: 1, sub: "Immediate mix" }),
+      NUM("mix_11", "1:1 mix", "Antiphospholipid antibody panel", null, null, "sec", { col: 1 }),
+      NUM("mix_patient", "Patient", "Antiphospholipid antibody panel", null, null, "sec", { col: 1 }),
+      NUM("mix_diff", "Difference (1:1 mix − NPP)", "Antiphospholipid antibody panel", null, null, "sec", { col: 2, sub: "Immediate mix" }),
+      CH("mix_rosner", "Rosner index", "Antiphospholipid antibody panel", [["correction", "≤8% Correction", "normal"], ["incomplete", "≥9% Incomplete", "abnormal", "The 1:1 mix shows incomplete correction (Rosner index ≥9%), indicating an inhibitor."], ["partial", "Partial correction", "abnormal", "The 1:1 mix shows only partial correction."]], { col: 2 }),
+      NUM("acl_igg", "Anticardiolipin IgG", "Antiphospholipid antibody panel", null, 10, "GPL", { sig: 40, hi: "positive", ref: "<10.0 GPL", col: 1, sub: "Anticardiolipin antibodies" }),
+      NUM("acl_igm", "Anticardiolipin IgM", "Antiphospholipid antibody panel", null, 10, "MPL", { sig: 40, hi: "positive", ref: "<10.0 MPL", col: 1 }),
+      NUM("b2_igg", "Beta-2 glycoprotein I IgG", "Antiphospholipid antibody panel", null, 7, "U/mL", { sig: 40, hi: "positive", ref: "<7.0 U/mL", col: 2, sub: "Beta-2 glycoproteins" }),
+      NUM("b2_igm", "Beta-2 glycoprotein I IgM", "Antiphospholipid antibody panel", null, 7, "U/mL", { sig: 40, hi: "positive", ref: "<7.0 U/mL", col: 2 }),
       NUM("protein_c_activity", "Protein C activity", "Natural anticoagulant panel", 70, 140, "%", { decimals: 0, lo: "reduced" }),
       NUM("protein_c_antigen", "Protein C antigen", "Natural anticoagulant panel", 72, 160, "%", { decimals: 0, lo: "reduced" }),
       NUM("protein_s_activity", "Protein S activity", "Natural anticoagulant panel", 55, 140, "%", { decimals: 0, lo: "reduced" }),
@@ -860,17 +876,44 @@ input, button, textarea, select { font-size: 1rem; }
   function entryCard(p, panel) {
     var card = h("section", { class: "card" }, h("h2", {}, "Results"));
     if (panel.interpretation) card.appendChild(interpRow(p, panel));
-    // Column header row, then sectioned rows — mirrors the paper form.
     var table = h("div", { class: "formtable" });
     table.appendChild(h("div", { class: "formhead" }, h("span", {}, "Test"), h("span", {}, "Result"), h("span", {}, "Reference")));
-    var lastGroup = null;
+    var cols2 = panel.cols2 || [];
+    // collect analytes into ordered groups
+    var order = [], byName = {};
     panel.analytes.forEach(function (a) {
       if (!visible(a, p.values)) return;
-      if (a.group && a.group !== lastGroup) { table.appendChild(h("div", { class: "formgroup" }, a.group)); lastGroup = a.group; }
-      table.appendChild(formRow(p, panel, a));
+      var g = a.group || "";
+      if (!byName[g]) { byName[g] = { name: g, items: [] }; order.push(byName[g]); }
+      byName[g].items.push(a);
+    });
+    order.forEach(function (grp) {
+      if (grp.name) table.appendChild(h("div", { class: "formgroup" }, grp.name));
+      if (cols2.indexOf(grp.name) >= 0) table.appendChild(twoColGroup(p, panel, grp.items));
+      else grp.items.forEach(function (a) { table.appendChild(formRow(p, panel, a)); });
     });
     card.appendChild(table);
     return card;
+  }
+
+  // Render a section as the form's two side-by-side columns (left = col 1, right = col 2),
+  // inserting sub-headers (Immediate mix / Anticardiolipin / Beta-2 glycoproteins).
+  function twoColGroup(p, panel, items) {
+    var left = h("div", { class: "fcol" }), right = h("div", { class: "fcol" });
+    items.forEach(function (a) {
+      var colEl = a.col === 2 ? right : left;
+      if (a.sub) colEl.appendChild(h("div", { class: "fsub" }, a.sub));
+      colEl.appendChild(formRow2(p, panel, a));
+    });
+    return h("div", { class: "formgroup-2col" }, left, right);
+  }
+  function formRow2(p, panel, a) {
+    var colorable = a.type === "number" || a.type === "choice";
+    var color = colorable ? E.colorOf(E.classify(a, p.values[a.id]).kind) : "neutral";
+    var ref = refText(a);
+    return h("div", { class: "formrow2 " + color, id: "row_" + a.id },
+      h("div", { class: "fname" }, a.label, ref ? h("div", { class: "fnote" }, ref) : null),
+      h("div", { class: "fresult" }, control(p, panel, a)));
   }
 
   function interpRow(p, panel) {
@@ -939,7 +982,7 @@ input, button, textarea, select { font-size: 1rem; }
     p.values[id] = val; p.updatedAt = Date.now(); save();
     var a = getPanel(p.panelId).analytes.filter(function (x) { return x.id === id; })[0];
     var row = document.getElementById("row_" + id);
-    if (row && a) { row.className = "formrow " + E.colorOf(E.classify(a, val).kind); var chip = document.getElementById("chip_" + id); if (chip) chip.replaceWith(chipFor(a, val)); }
+    if (row && a) { var base = row.classList.contains("formrow2") ? "formrow2" : "formrow"; row.className = base + " " + E.colorOf(E.classify(a, val).kind); var chip = document.getElementById("chip_" + id); if (chip) chip.replaceWith(chipFor(a, val)); }
     refreshReport(p); refreshSidebarDot(p);
   }
   function refreshSidebarDot(p) {
