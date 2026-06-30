@@ -186,6 +186,24 @@ input, button, textarea, select { font-size: 1rem; }
   .fcol:first-child { border-right: none; border-bottom: 1px solid var(--line); }
 }
 
+/* ---- paper-form look: make the entry card mirror the printed HFH sheet ---- */
+.card.paper { padding: 18px 18px 14px; }
+.paper-head { text-align: center; border-bottom: 2px solid var(--ink); padding-bottom: 10px; margin-bottom: 12px; }
+.paper-org { font-weight: 800; font-size: 12px; color: #0e4d8c; letter-spacing: .02em; }
+.paper-code { font-size: 10.5px; color: var(--ink-muted); margin-top: 3px; font-variant-numeric: tabular-nums; }
+.paper-title { font-weight: 800; font-size: 17px; margin-top: 6px; letter-spacing: .03em; }
+.card.paper .formtable { border: 1.5px solid var(--ink); border-radius: 0; }
+.card.paper .formhead { grid-template-columns: 1fr 200px 150px; background: #eef2f5; color: var(--ink); border-bottom: 1.5px solid var(--ink); font-size: 11px; }
+.card.paper .formhead span + span { border-left: 1px solid var(--ink); text-align: center; }
+.card.paper .formgroup { background: #dde6ee; color: var(--ink); border-top: 1.5px solid var(--ink); border-bottom: 1px solid var(--ink); text-transform: uppercase; letter-spacing: .04em; }
+.card.paper .formrow { grid-template-columns: 1fr 200px 150px; border-top: 1px solid #c9d3db; }
+.card.paper .formrow .fresult { border-left: 1px solid var(--ink); border-right: 1px solid var(--ink); }
+.card.paper .formrow .fref { text-align: right; }
+.card.paper .formgroup-2col { border-top: 1.5px solid var(--ink); }
+.card.paper .fcol:first-child { border-right: 1.5px solid var(--ink); }
+.card.paper .formrow2 { border-top: 1px solid #c9d3db; }
+.paper-sig { margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--ink); font-style: italic; font-weight: 600; }
+
 /* ---- print (single OR batch — both go through the .print-batch overlay) ---- */
 .print-batch { display: none; }
 @media print {
@@ -304,6 +322,8 @@ input, button, textarea, select { font-size: 1rem; }
     id: "bleeding_diathesis",
     title: "Bleeding diathesis panel",
     heading: "BLEEDING DISORDER REPORT",
+    code: "PRC-HFH-COA-5.52-pro21-frm3",
+    formTitle: "BLEEDING DISORDER REPORT",
     signature: "Physician signature / date:",
     analytes: [
       NUM("pt", "Prothrombin time / INR", "Basic coagulation tests", 12.1, 14.5, "sec", { hi: "prolonged" }),
@@ -368,6 +388,8 @@ input, button, textarea, select { font-size: 1rem; }
     id: "hypercoagulability",
     title: "Hypercoagulability panel",
     heading: "HYPERCOAGULABILITY REPORT",
+    code: "PRC-HFH-COA-5.52-pro21-frm4",
+    formTitle: "HYPERCOAGULABILITY REPORT",
     signature: "Physician signature / date:",
     cols2: ["Antiphospholipid antibody panel"],
     analytes: [
@@ -872,12 +894,18 @@ input, button, textarea, select { font-size: 1rem; }
   }
 
   function entryCard(p, panel) {
-    var card = h("section", { class: "card" }, h("h2", {}, "Results"));
+    // Rendered as a faithful replica of the paper HFH form: document header
+    // (org · code · title), one black-gridded table with RESULTS / REFERENCE
+    // RANGE columns and section bands, and the physician-signature footer.
+    var card = h("section", { class: "card paper" });
+    card.appendChild(h("div", { class: "paper-head" },
+      h("div", { class: "paper-org" }, "Henry Ford Health · Pathology & Laboratory Medicine"),
+      panel.code ? h("div", { class: "paper-code" }, panel.code) : null,
+      h("div", { class: "paper-title" }, panel.formTitle || panel.heading || "Report")));
     if (panel.interpretation) card.appendChild(interpRow(p, panel));
     var table = h("div", { class: "formtable" });
-    table.appendChild(h("div", { class: "formhead" }, h("span", {}, "Test"), h("span", {}, "Result"), h("span", {}, "Reference")));
+    table.appendChild(h("div", { class: "formhead" }, h("span", {}, ""), h("span", {}, "Results"), h("span", {}, "Reference Range")));
     var cols2 = panel.cols2 || [];
-    // collect analytes into ordered groups
     var order = [], byName = {};
     panel.analytes.forEach(function (a) {
       if (!visible(a, p.values)) return;
@@ -891,6 +919,7 @@ input, button, textarea, select { font-size: 1rem; }
       else grp.items.forEach(function (a) { table.appendChild(formRow(p, panel, a)); });
     });
     card.appendChild(table);
+    card.appendChild(h("div", { class: "paper-sig" }, panel.signature || "Physician signature / date:"));
     return card;
   }
 
