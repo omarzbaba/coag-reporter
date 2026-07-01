@@ -125,7 +125,24 @@ input, button, textarea, select { font-size: 1rem; }
 .settings .field input.range { width: 110px; min-height: 40px; }
 .range-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; padding: 8px 0; border-bottom: 1px dashed var(--line); }
 .tpl-row { margin-bottom: 14px; }
-.tpl-row label { display: block; font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+.tpl-row label { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+
+.settings .set-hint { color: var(--ink-muted); font-size: 13px; line-height: 1.55; margin: 2px 0 12px; max-width: 74ch; }
+.settings input.range.wide { width: min(360px, 100%); min-height: 40px; }
+.set-group { border: 1px solid var(--line); border-radius: 12px; margin: 12px 0; background: var(--surface); overflow: hidden; }
+.set-group > summary { cursor: pointer; padding: 12px 16px; font-weight: 750; font-size: 13.5px; list-style: none; user-select: none; background: rgba(14, 107, 140, 0.06); }
+.set-group > summary::-webkit-details-marker { display: none; }
+.set-group > summary::before { content: "▸"; display: inline-block; margin-right: 8px; transition: transform .15s ease; color: var(--ink-muted); }
+.set-group[open] > summary::before { transform: rotate(90deg); }
+.set-group > summary:hover { background: rgba(14, 107, 140, 0.11); }
+.set-group > .tpl-row, .set-group > .range-row { margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.set-group > .tpl-row:last-child, .set-group > .range-row:last-child { border-bottom: 0; }
+.tpl-row.edited { border-left: 3px solid var(--accent); background: rgba(14, 107, 140, 0.045); }
+.range-row.edited { border-left: 3px solid var(--accent); padding-left: 13px; background: rgba(14, 107, 140, 0.045); }
+.when-hint { font-size: 12px; color: var(--ink-muted); margin: -1px 0 6px; font-style: italic; }
+.edited-tag { font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); background: rgba(14, 107, 140, 0.12); padding: 1px 7px; border-radius: 999px; }
+.edited-count { margin-left: 10px; font-size: 12px; font-weight: 700; color: var(--accent); }
+.btn.xs { min-height: 0; padding: 2px 9px; font-size: 11px; font-weight: 700; line-height: 1.5; border-radius: 8px; }
 
 .empty { text-align: center; color: var(--ink-muted); padding: 60px 20px; }
 .draft-badge { margin-left: 10px; font-size: 11px; font-weight: 800; letter-spacing: .05em; padding: 2px 8px; border-radius: 999px; background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-line); vertical-align: middle; }
@@ -380,7 +397,9 @@ input, button, textarea, select { font-size: 1rem; }
     templates: {
       intro: "Laboratory testing for a bleeding diathesis is performed.",
       concl_none: "No specific bleeding-disorder pattern is identified among the tested analytes; correlate with the clinical bleeding history.",
-      empty: "No bleeding-disorder results have been entered."
+      empty: "No bleeding-disorder results have been entered.",
+      normals_one: "{list} is within normal limits.",
+      normals_many: "{list} are within normal limits."
     }
   });
 
@@ -443,7 +462,9 @@ input, button, textarea, select { font-size: 1rem; }
     templates: {
       intro: "Laboratory testing for a hypercoagulable state (thrombophilia) is performed.",
       concl_none: "No specific thrombophilia pattern is identified among the tested analytes; correlate with the clinical picture and the timing of testing.",
-      empty: "No hypercoagulability results have been entered."
+      empty: "No hypercoagulability results have been entered.",
+      normals_one: "{list} is within normal limits.",
+      normals_many: "{list} are within normal limits."
     }
   });
 
@@ -646,7 +667,11 @@ input, button, textarea, select { font-size: 1rem; }
 
     var para = (t.intro || "Laboratory testing is performed.");
     if (abnormal.length) para += " " + abnormal.join(" ");
-    if (normals.length) para += " " + capFirst(joinList(normals)) + (normals.length > 1 ? " are within normal limits." : " is within normal limits.");
+    if (normals.length) {
+      var listStr = capFirst(joinList(normals));
+      var nt = normals.length > 1 ? (t.normals_many || "{list} are within normal limits.") : (t.normals_one || "{list} is within normal limits.");
+      para += " " + fill(nt, { list: listStr });
+    }
     var out = [para.trim()];
     out.push(imps.length ? imps.join(" ") : (t.concl_none || "No specific diagnostic pattern is identified among the tested analytes; correlate with the clinical picture."));
     if (caveats.length) out.push("Note: " + caveats.join(" "));
@@ -732,12 +757,27 @@ input, button, textarea, select { font-size: 1rem; }
     return window.DEFAULT_PANELS.map(function (p) {
       var cfg = (store.config.panels || {})[p.id] || {};
       var panel = JSON.parse(JSON.stringify(p));
-      if (cfg.signature != null) panel.signature = cfg.signature;
-      if (cfg.heading != null) panel.heading = cfg.heading;
-      if (cfg.templates) for (var k in cfg.templates) panel.templates[k] = cfg.templates[k];
+      if (cfg.signature != null && cfg.signature !== "") panel.signature = cfg.signature;
+      if (cfg.heading != null && cfg.heading !== "") panel.heading = cfg.heading;
+      // Fixed wording (intro / conclusion / empty). Clearing a box reverts to
+      // the built-in default, which is also the per-field reset gesture.
+      if (cfg.templates) for (var k in cfg.templates) if (cfg.templates[k] != null && cfg.templates[k] !== "") panel.templates[k] = cfg.templates[k];
+      // Ranges: an emptied box means "no override → keep the built-in default",
+      // exactly like every wording field. (Never wipe a bound to null on clear —
+      // that would silently stop flagging a genuinely abnormal result.)
       if (cfg.ranges) panel.analytes.forEach(function (a) {
         var r = cfg.ranges[a.id]; if (!r) return;
-        ["low", "high", "sig"].forEach(function (f) { if (r[f] !== undefined && r[f] !== "") a[f] = Number(r[f]); else if (r[f] === "") a[f] = null; });
+        ["low", "high", "sig"].forEach(function (f) { if (r[f] != null && r[f] !== "" && isFinite(Number(r[f]))) a[f] = Number(r[f]); });
+      });
+      // Interpretive comments (one canned comment per clinical scenario) + caveats.
+      if (cfg.rules) (panel.rules || []).forEach(function (r) { if (cfg.rules[r.id] != null && cfg.rules[r.id] !== "") r.impression = cfg.rules[r.id]; });
+      if (cfg.caveats) (panel.caveats || []).forEach(function (c) { if (cfg.caveats[c.id] != null && cfg.caveats[c.id] !== "") c.text = cfg.caveats[c.id]; });
+      // Per-analyte abnormal-result phrasing (numeric low/high sentence; choice option report).
+      (panel.analytes || []).forEach(function (a) {
+        var ph = cfg.phrasing && cfg.phrasing[a.id];
+        if (ph) ["loReport", "hiReport"].forEach(function (f) { if (ph[f] != null && ph[f] !== "") a[f] = ph[f]; });
+        var op = cfg.options && cfg.options[a.id];
+        if (op && a.options) a.options.forEach(function (o) { if (op[o.v] != null && op[o.v] !== "") o.report = op[o.v]; });
       });
       return panel;
     });
@@ -1098,26 +1138,166 @@ input, button, textarea, select { font-size: 1rem; }
     r.readAsText(file);
   }
 
+  // ---------- settings helpers ----------
+  // Every canned comment a report can emit is surfaced here, grouped by the
+  // scenario that triggers it, so the attending can tune the wording without code.
+  var TPL_LABELS = {
+    intro: "Opening line",
+    concl_none: "Conclusion — when no specific pattern is found",
+    empty: "Shown when no results have been entered",
+    normals_one: "Normal-results line — one test in range (use {list})",
+    normals_many: "Normal-results line — multiple tests in range (use {list})",
+    concl_negative: "Conclusion — negative evaluation",
+    concl_pending: "Conclusion — panel incomplete",
+    abnormal_tail: "Conclusion — abnormal result",
+    res_both_neg: "Result line — both LA tests negative",
+    res_ptt_only: "Result line — PTT-LA positive only",
+    res_drvvt_only: "Result line — dRVVT positive only",
+    res_both_pos: "Result line — both LA tests positive",
+    apa_all_normal: "Antibody line — all normal",
+    concl_neg: "Conclusion — LA negative",
+    concl_neg_nonsig: "Conclusion — antibody below significance",
+    concl_pos: "Conclusion — LA positive",
+    concl_sig_apa: "Conclusion — significant antibody, LA negative",
+    concl_sig_apa_addon: "Conclusion add-on — significant antibody with positive LA"
+  };
+  var COND_WORDS = { high: "elevated", low: "low / reduced", sig: "markedly elevated", normal: "normal", not_done: "not resulted", positive: "positive", negative: "negative", abnormal: "abnormal", incomplete: "incomplete correction", partial: "partial correction", correction: "corrects" };
+  function condWords(list) { return (list || []).map(function (x) { return COND_WORDS[x] || x; }).join(" or "); }
+  function analyteLabelIn(panel, id) { var lab = id; (panel.analytes || []).forEach(function (x) { if (x.id === id) lab = x.label; }); return lab; }
+  function describeWhen(panel, when) { var parts = []; for (var k in when) parts.push(analyteLabelIn(panel, k) + " " + condWords(when[k])); return parts.join("  ·  "); }
+  function unitStr(a) { return a.unit === "%" ? "%" : (a.unit ? " " + a.unit : ""); }
+  function defaultHiTpl(a) { return "The " + a.label + " ({val}" + unitStr(a) + ") is " + (a.hiWord || "increased") + "."; }
+  function defaultLoTpl(a) { return "The " + a.label + " ({val}" + unitStr(a) + ") is " + (a.loWord || "decreased") + "."; }
+  function scenarioTitle(id) {
+    return String(id || "").replace(/_/g, " ")
+      .replace(/\b(pt|aptt|tt|dic|aps|apcr|vwd|la|epi|adp|abo|acl|b2|npp|f\d+)\b/gi, function (m) { return m.toUpperCase(); })
+      .replace(/^\w/, function (c) { return c.toUpperCase(); });
+  }
+  function isEd(obj, key) { return !!(obj && obj[key] != null && obj[key] !== ""); }
+  function countEdited(cfg) {
+    var n = 0;
+    if (isEd(cfg, "signature")) n++; if (isEd(cfg, "heading")) n++;
+    ["templates", "rules", "caveats"].forEach(function (g) { var o = cfg[g] || {}; for (var k in o) if (o[k] != null && o[k] !== "") n++; });
+    var ph = cfg.phrasing || {}; for (var a in ph) for (var f in ph[a]) if (ph[a][f] != null && ph[a][f] !== "") n++;
+    var op = cfg.options || {}; for (var a2 in op) for (var v in op[a2]) if (op[a2][v] != null && op[a2][v] !== "") n++;
+    var rg = cfg.ranges || {}; for (var a3 in rg) for (var f2 in rg[a3]) if (rg[a3][f2] != null && rg[a3][f2] !== "") n++;
+    return n;
+  }
+  function setGroup(title, open) { return h("details", { class: "set-group", open: open ? "" : null }, h("summary", {}, title)); }
+  // One editable canned comment: label (+ edited tag & reset), an optional
+  // trigger hint, and the textarea. Reset re-renders; clearing the box also
+  // reverts to the default (mergedPanels treats "" as no override).
+  function wordingRow(labelText, hintText, value, edited, onInput, onReset) {
+    var lab = h("label", {}, labelText);
+    if (edited) { lab.appendChild(h("span", { class: "edited-tag" }, "edited")); lab.appendChild(h("button", { class: "btn ghost xs", type: "button", title: "Restore the default wording", onClick: onReset }, "↺ reset")); }
+    var row = h("div", { class: "tpl-row" + (edited ? " edited" : "") }, lab);
+    if (hintText) row.appendChild(h("div", { class: "when-hint" }, hintText));
+    row.appendChild(h("textarea", { spellcheck: "true", "aria-label": (typeof labelText === "string" ? labelText : null), onInput: onInput }, value));
+    return row;
+  }
+
   // ---------- settings ----------
   function settingsView() {
     var wrap = h("div", { class: "wrap settings" });
-    wrap.appendChild(h("section", { class: "card full" }, h("h2", {}, "Casebook (all data is stored only on this computer)"),
+    wrap.appendChild(h("section", { class: "card full" },
+      h("h2", {}, "Casebook & report wording (everything is stored only on this computer)"),
+      h("p", { class: "set-hint" }, "Every canned comment the report can produce is listed below, grouped by the scenario that triggers it. Edits save instantly and apply the next time a report is generated. Use {val}/{placeholders} to drop in entered values. Clear a box — or press ↺ — to restore the built-in wording."),
       h("div", { class: "report-actions" },
         h("button", { class: "btn", onClick: exportCasebook }, "⬇ Export casebook (.json)"),
         (function () { var inp = h("input", { type: "file", accept: ".json", style: "display:none", onChange: function (e) { if (e.target.files[0]) importCasebook(e.target.files[0]); } }); return h("span", {}, h("button", { class: "btn", onClick: function () { inp.click(); } }, "⬆ Import casebook"), inp); })(),
-        h("button", { class: "btn ghost", onClick: function () { if (confirm("Reset template/range customizations to defaults? (Patients are kept.)")) { store.config = { panels: {} }; render(); } } }, "↺ Reset templates"))));
+        h("button", { class: "btn ghost", onClick: function () { if (confirm("Reset ALL wording, template and range customizations to defaults? (Patients are kept.)")) { store.config = { panels: {} }; save(); render(); } } }, "↺ Reset all wording"))));
+
     visiblePanels().forEach(function (panel) {
-      store.config.panels[panel.id] = store.config.panels[panel.id] || {}; var cfg = store.config.panels[panel.id]; cfg.ranges = cfg.ranges || {};
-      var sec = h("section", { class: "card full" }, h("h2", {}, "Edit: " + panel.title));
-      sec.appendChild(h("div", { class: "tpl-row" }, h("label", {}, "Signature line"), h("input", { class: "range", style: "width:280px;min-height:40px", value: panel.signature || "", onInput: function (e) { cfg.signature = e.target.value; save(); } })));
-      sec.appendChild(h("h3", { style: "margin:14px 0 6px;font-size:13px" }, "Reference ranges & thresholds"));
-      panel.analytes.filter(function (a) { return a.type === "number"; }).forEach(function (a) {
-        cfg.ranges[a.id] = cfg.ranges[a.id] || {};
-        function rng(field, lbl) { return h("div", { class: "field" }, h("label", {}, lbl), h("input", { class: "range", type: "number", step: "0.1", value: a[field] != null ? a[field] : "", onInput: function (e) { cfg.ranges[a.id][field] = e.target.value; save(); } })); }
-        sec.appendChild(h("div", { class: "range-row" }, h("div", { style: "min-width:220px;font-weight:650" }, a.label + (a.unit ? " (" + a.unit + ")" : "")), rng("low", "Low"), rng("high", "High"), (a.sig != null) ? rng("sig", "Significant >") : null));
+      var pid = panel.id;
+      // Read-through view of this panel's config. We DO NOT scaffold the store
+      // eagerly — sub-objects are created lazily on the first real edit (below),
+      // so merely opening Settings writes nothing and an unedited casebook
+      // exports clean. `cfg` reflects the live store object when one exists.
+      var cfg = store.config.panels[pid] || {};
+      function ownCfg() { return (store.config.panels[pid] = store.config.panels[pid] || {}); }
+      function bag(key) { var c = ownCfg(); return (c[key] = c[key] || {}); }
+      function sub(key, id) { var b = bag(key); return (b[id] = b[id] || {}); }
+      var edited = countEdited(cfg);
+      var sec = h("section", { class: "card full" },
+        h("h2", {}, panel.title, edited ? h("span", { class: "edited-count" }, edited + " customized") : null),
+        h("button", { class: "btn ghost sm", style: "margin-bottom:8px", onClick: function () { if (confirm("Restore all default wording for the " + panel.title + "? (Other panels and patients are kept.)")) { delete store.config.panels[pid]; save(); render(); } } }, "↺ Restore this panel's defaults"));
+
+      // Report framing — signature + fixed template fragments.
+      var g1 = setGroup("Report framing — signature, opening & closing lines", true);
+      g1.appendChild((function () {
+        var lab = h("label", {}, "Signature line");
+        if (isEd(cfg, "signature")) { lab.appendChild(h("span", { class: "edited-tag" }, "edited")); lab.appendChild(h("button", { class: "btn ghost xs", type: "button", onClick: function () { if (store.config.panels[pid]) delete store.config.panels[pid].signature; save(); render(); } }, "↺ reset")); }
+        return h("div", { class: "tpl-row" + (isEd(cfg, "signature") ? " edited" : "") }, lab, h("input", { class: "range wide", "aria-label": "Signature line", value: panel.signature || "", onInput: function (e) { ownCfg().signature = e.target.value; save(); } }));
+      })());
+      Object.keys(panel.templates).forEach(function (key) {
+        g1.appendChild(wordingRow(TPL_LABELS[key] || key, null, panel.templates[key], isEd(cfg.templates, key),
+          function (e) { bag("templates")[key] = e.target.value; save(); },
+          function () { if (cfg.templates) delete cfg.templates[key]; save(); render(); }));
       });
-      sec.appendChild(h("h3", { style: "margin:16px 0 6px;font-size:13px" }, "Report wording (use {placeholders} — they auto-fill with entered values)"));
-      Object.keys(panel.templates).forEach(function (key) { cfg.templates = cfg.templates || {}; sec.appendChild(h("div", { class: "tpl-row" }, h("label", {}, key), h("textarea", { onInput: function (e) { cfg.templates[key] = e.target.value; save(); } }, panel.templates[key]))); });
+      sec.appendChild(g1);
+
+      // Interpretive comments — one canned comment per clinical scenario.
+      if ((panel.rules || []).length) {
+        var g2 = setGroup("Interpretive comments — one canned comment per clinical scenario (" + panel.rules.length + ")", true);
+        panel.rules.forEach(function (r) {
+          g2.appendChild(wordingRow(scenarioTitle(r.id), "Triggers when:  " + describeWhen(panel, r.when), r.impression, isEd(cfg.rules, r.id),
+            function (e) { bag("rules")[r.id] = e.target.value; save(); },
+            function () { if (cfg.rules) delete cfg.rules[r.id]; save(); render(); }));
+        });
+        sec.appendChild(g2);
+      }
+
+      // Abnormal-result phrasing — per test.
+      var numAbn = panel.analytes.filter(function (a) { return a.type === "number" && (a.low != null || a.high != null || a.sig != null); });
+      var chAbn = panel.analytes.filter(function (a) { return a.type === "choice" && (a.options || []).some(function (o) { return o.kind !== "normal" && o.kind !== "skip"; }); });
+      if (numAbn.length || chAbn.length) {
+        var g3 = setGroup("Abnormal-result phrasing — the sentence printed when a test is out of range (" + (numAbn.length + chAbn.length) + ")", false);
+        numAbn.forEach(function (a) {
+          var pcur = (cfg.phrasing || {})[a.id];
+          if (a.low != null) g3.appendChild(wordingRow(a.label + " — when low", "Use {val} for the entered value.", a.loReport || defaultLoTpl(a), isEd(pcur, "loReport"),
+            function (e) { sub("phrasing", a.id).loReport = e.target.value; save(); }, function () { if (pcur) delete pcur.loReport; save(); render(); }));
+          if (a.high != null || a.sig != null) g3.appendChild(wordingRow(a.label + " — when high", "Use {val} for the entered value.", a.hiReport || defaultHiTpl(a), isEd(pcur, "hiReport"),
+            function (e) { sub("phrasing", a.id).hiReport = e.target.value; save(); }, function () { if (pcur) delete pcur.hiReport; save(); render(); }));
+        });
+        chAbn.forEach(function (a) {
+          var ocur = (cfg.options || {})[a.id];
+          (a.options || []).filter(function (o) { return o.kind !== "normal" && o.kind !== "skip"; }).forEach(function (o) {
+            g3.appendChild(wordingRow(a.label + " — “" + o.label + "”", null, o.report || ("The " + a.label + " is abnormal."), isEd(ocur, o.v),
+              function (e) { sub("options", a.id)[o.v] = e.target.value; save(); }, function () { if (ocur) delete ocur[o.v]; save(); render(); }));
+          });
+        });
+        sec.appendChild(g3);
+      }
+
+      // Caveats / footnotes.
+      if ((panel.caveats || []).length) {
+        var g4 = setGroup("Caveats / footnotes — printed as a “Note:” line (" + panel.caveats.length + ")", false);
+        panel.caveats.forEach(function (c) {
+          g4.appendChild(wordingRow(scenarioTitle(c.id), "Triggers when:  " + describeWhen(panel, c.when), c.text, isEd(cfg.caveats, c.id),
+            function (e) { bag("caveats")[c.id] = e.target.value; save(); }, function () { if (cfg.caveats) delete cfg.caveats[c.id]; save(); render(); }));
+        });
+        sec.appendChild(g4);
+      }
+
+      // Reference ranges & thresholds. Clearing a box reverts to the built-in
+      // default (never wipes the bound); a per-row ↺ appears once any bound is edited.
+      var g5 = setGroup("Reference ranges & thresholds", false);
+      panel.analytes.filter(function (a) { return a.type === "number"; }).forEach(function (a) {
+        function rng(field, lbl) {
+          return h("div", { class: "field" }, h("label", {}, lbl), h("input", { class: "range", type: "number", step: "0.1", "aria-label": a.label + " " + lbl, value: a[field] != null ? a[field] : "", onInput: function (e) {
+            var v = e.target.value;
+            if (v === "" || !isFinite(Number(v))) { var rc = (cfg.ranges || {})[a.id]; if (rc) delete rc[field]; }
+            else sub("ranges", a.id)[field] = v;
+            save();
+          } }));
+        }
+        var rc = (cfg.ranges || {})[a.id];
+        var rEd = isEd(rc, "low") || isEd(rc, "high") || isEd(rc, "sig");
+        var resetR = rEd ? h("button", { class: "btn ghost xs", type: "button", title: "Restore default range", onClick: function () { if (cfg.ranges) delete cfg.ranges[a.id]; save(); render(); } }, "↺ reset") : null;
+        g5.appendChild(h("div", { class: "range-row" + (rEd ? " edited" : "") }, h("div", { style: "min-width:220px;font-weight:650" }, a.label + (a.unit ? " (" + a.unit + ")" : ""), rEd ? h("span", { class: "edited-tag", style: "margin-left:8px" }, "edited") : null), rng("low", "Low"), rng("high", "High"), (a.sig != null) ? rng("sig", "Significant >") : null, resetR));
+      });
+      sec.appendChild(g5);
+
       wrap.appendChild(sec);
     });
     return wrap;
